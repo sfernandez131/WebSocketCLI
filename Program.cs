@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json;
-using SharpDX.DirectInput;
+﻿using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WebSocketSharp;
@@ -14,18 +14,28 @@ namespace WebSocketCLI
         private static WebSocketSharp.WebSocket WebSocket { get; set; }
         private static string GamePadOutput { get; set; }
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
-            ExecuteProg();
+            try
+            {
+                await ExecuteProg();
+                Console.ReadKey();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
         }
 
-        private static void ExecuteProg()
+        private static async Task ExecuteProg()
         {
             // Run socket connection.
             Console.WriteLine("STARTING...\nPress L+R+Select to restart socket.\n\n=============================================");
 
             OpenSocket();
-            GamePadInputs();
+
+            while (true)
+                await GamePadInputs();
         }
 
         private static void CallWebSocket(string message)
@@ -44,7 +54,7 @@ namespace WebSocketCLI
         private static void OpenSocket()
         {
             // Open socket
-            WebSocket = new WebSocketSharp.WebSocket("ws://172.16.2.43:8080/Echo");
+            WebSocket = new WebSocketSharp.WebSocket("ws://127.0.0.1:7889/Echo");
             WebSocket.OnMessage += WebSocket_OnMessage;
             WebSocket.Connect();
         }
@@ -54,7 +64,7 @@ namespace WebSocketCLI
             WebSocket.Close();
         }
 
-        private static void GamePadInputs()
+        private static async Task GamePadInputs()
         {
             try
             {
@@ -80,6 +90,8 @@ namespace WebSocketCLI
                     GamePadOutput = "No joystick/Gamepad found.";
                     Console.WriteLine(GamePadOutput);
                     CallWebSocket(GamePadOutput);
+                    await Task.Delay(3000);
+                    return;
                     //Console.ReadKey();
                     //Environment.Exit(1);
                 }
@@ -130,7 +142,7 @@ namespace WebSocketCLI
                             if (joystickOffsets.Contains(JoystickOffset.Buttons4) && joystickOffsets.Contains(JoystickOffset.Buttons5) && joystickOffsets.Contains(JoystickOffset.Buttons6))
                             {
                                 CloseSocket();
-                                ExecuteProg();
+                                await ExecuteProg();
                             }
                             CallWebSocket(GamePadOutput);
                         }
@@ -138,7 +150,7 @@ namespace WebSocketCLI
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex);
-                        GamePadInputs();
+                        await GamePadInputs();
                     }
                 }
             }
@@ -146,7 +158,7 @@ namespace WebSocketCLI
             {
                 Console.WriteLine(ex);
                 CloseSocket();
-                ExecuteProg();
+                await ExecuteProg();
             }
         }
 
@@ -176,7 +188,7 @@ namespace WebSocketCLI
 
         private static void WebSocket_OnOpen(object sender, EventArgs e)
         {
-            WebSocket.Send(JsonConvert.SerializeObject("Socket Open!"));
+            WebSocket.Send(JsonSerializer.Serialize("Socket Open!"));
         }
     }
 }
